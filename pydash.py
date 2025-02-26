@@ -11,7 +11,7 @@ import os
 DRIVE_CSV_URL = os.getenv("DRIVE_CSV_URL")
 
 # Read CSV from Google Drive
-df = pd.read_csv(DRIVE_CSV_URL)
+df = pd.read_csv(DRIVE_CSV_URL,encoding='utf-8')
 
 # Ensure date columns are in datetime format
 df['hire_date'] = pd.to_datetime(df['hire_date'],dayfirst=True)
