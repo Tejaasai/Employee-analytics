@@ -14,14 +14,14 @@ DRIVE_CSV_URL = os.getenv("DRIVE_CSV_URL")
 df = pd.read_csv(DRIVE_CSV_URL)
 
 # Ensure date columns are in datetime format
-df['hire_date'] = pd.to_datetime(df['hire_date'])
-df['last_date'] = pd.to_datetime(df['last_date'])
+df['hire_date'] = pd.to_datetime(df['hire_date'],dayfirst=True)
+df['last_date'] = pd.to_datetime(df['last_date'],dayfirst=True)
 
 
 # ======================
 # Key Metrics Section
 # ======================
-st.title("📈 Employee Analytics Dashbaord")
+st.title("📈 Employee Analytics Dashboard")
 st.header("📊 Key Metrics")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -37,14 +37,14 @@ with col2:
 with col3:
     #Average Salary
     # Remove duplicate employee records, keeping only the first occurrence
-    unique_employees = df.drop_duplicates(subset=['emp_no'])
+    unique_employees = df.drop_duplicates(subset=['emp_no']).copy()
     avg_salary = unique_employees['salary'].mean()
     st.metric("Average Salary", f"₹{avg_salary:,.2f}")
 
 with col4:
     #Average Tenure by removing employees who work in two different departments
-    unique_employees = df.drop_duplicates(subset=['emp_no']).copy()
-    unique_employees['tenure'] = np.where(
+    # unique_employees = df.drop_duplicates(subset=['emp_no']).copy()
+    unique_employees.loc[:,'tenure'] = np.where(
     unique_employees['last_date'].notna(),
     (unique_employees['last_date'] - unique_employees['hire_date']).dt.days // 365,
     (unique_employees['hire_date'].max() - unique_employees['hire_date']).dt.days // 365
@@ -122,8 +122,8 @@ filtered_df = df[
 ]
 
 # Create filtered unique employees dataset for analysis where employee count should not be repeated
-unique_filtered_employees = filtered_df.drop_duplicates(subset=['emp_no'])
-unique_filtered_employees['tenure'] = np.where(
+unique_filtered_employees = filtered_df.drop_duplicates(subset=['emp_no']).copy()
+unique_filtered_employees.loc[:,'tenure'] = np.where(
     unique_filtered_employees['last_date'].notna(),
     (unique_filtered_employees['last_date'] - unique_filtered_employees['hire_date']).dt.days // 365,
     (unique_filtered_employees['hire_date'].max() - unique_filtered_employees['hire_date']).dt.days // 365
