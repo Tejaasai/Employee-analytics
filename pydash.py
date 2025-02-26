@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 
 # Load environment variable
-DRIVE_CSV_URL = os.getenv("DRIVE_CSV_URL")
+DRIVE_CSV_URL = st.secrets["DRIVE_CSV_URL"]
 
 # Read CSV from Google Drive
 df = pd.read_csv(DRIVE_CSV_URL,encoding='utf-8')
