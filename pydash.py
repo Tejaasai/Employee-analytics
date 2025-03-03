@@ -48,7 +48,7 @@ if not st.session_state.authenticated:
 st.sidebar.button("Logout", on_click=logout)
 
 # Load environment variable
-DRIVE_CSV_URL = st.secrets("DRIVE_CSV_URL") #for streamlit to collect drivelink from secrets to load data
+DRIVE_CSV_URL = st.secrets["DRIVE_CSV_URL"] #for streamlit to collect drivelink from secrets to load data
 
 # Read CSV from Google Drive
 df = pd.read_csv(DRIVE_CSV_URL,encoding='utf-8')
