@@ -1,4 +1,6 @@
 import streamlit as st
+import hashlib
+import os
 import pandas as pd
 import numpy as np
 import seaborn as sns
@@ -7,8 +9,46 @@ import plotly.express as px
 from datetime import datetime
 import os
 
+# ---------------------- Authentication System ----------------------
+def authenticate_user(username, password):
+    """Secure authentication system with hashed passwords"""
+    authorized_users = {
+        "admin": hashlib.sha256(os.getenv("ADMIN_PW", "admin@123").encode()).hexdigest(),
+        "user": hashlib.sha256(os.getenv("USER_PW", "user@123").encode()).hexdigest()
+    }
+    return authorized_users.get(username) == hashlib.sha256(password.encode()).hexdigest()
+
+def login_form():
+    """Display login form and handle authentication"""
+    with st.form("Login"):
+        st.subheader("🔒 Administrator Login")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.form_submit_button("Login"):
+            if authenticate_user(username, password):
+                st.session_state.authenticated = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+
+def logout():
+    """Clear session state for logout"""
+    st.session_state.clear()
+
+# Check authentication state
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    login_form()
+    st.stop()
+
+# Logout button in sidebar
+st.sidebar.button("Logout", on_click=logout)
+
 # Load environment variable
-DRIVE_CSV_URL = st.secrets["DRIVE_CSV_URL"]
+DRIVE_CSV_URL = st.secrets("DRIVE_CSV_URL") #for streamlit to collect drivelink from secrets to load data
 
 # Read CSV from Google Drive
 df = pd.read_csv(DRIVE_CSV_URL,encoding='utf-8')
@@ -44,14 +84,8 @@ with col3:
 with col4:
     #Average Tenure by removing employees who work in two different departments
     # unique_employees = df.drop_duplicates(subset=['emp_no']).copy()
-    unique_employees.loc[:,'tenure'] = np.where(
-    unique_employees['last_date'].notna(),
-    (unique_employees['last_date'] - unique_employees['hire_date']).dt.days // 365,
-    (unique_employees['hire_date'].max() - unique_employees['hire_date']).dt.days // 365
-)
-    
-    avg_tenure = unique_employees['tenure'].mean()
-    st.metric("Average Tenure", f"{avg_tenure:.1f} years")
+    left_count = unique_employees['last_date'].notna().sum()
+    st.metric("Employees Left", f"{left_count:,}")
 
 # ======================
 # Interactive Filters
@@ -87,39 +121,33 @@ with st.sidebar.expander("**Departments**", expanded=True):
             if selected:
                 selected_depts.append(dept)
 
-# Job Title Filter
-with st.sidebar.expander("**Job Titles**", expanded=True):
-    # Select All checkbox
-    all_titles = st.checkbox("Select All Titles", 
-                           value=True,
-                           key="all_titles")
+# **Employment Status Filter**
+with st.sidebar.expander("**Employment Status**", expanded=True):
+    all_status = st.checkbox("Select All Status", value=True, key="all_status")
     
-    # Search box for titles
-    title_search = st.text_input("Search Titles:", key="title_search")
-    
-    # Filtered title list
-    filtered_titles = [title for title in df["title"].unique() 
-                      if title_search.lower() in title.lower()]
-    
-    # Create columns for better layout
-    cols = st.columns(2)
-    selected_titles = []
-    
-    # Show checkboxes in 2 columns
-    for idx, title in enumerate(filtered_titles):
-        with cols[idx % 2]:
-            if all_titles:
-                selected = st.checkbox(title, value=True, key=f"title_{title}")
-            else:
-                selected = st.checkbox(title, key=f"title_{title}")
-            if selected:
-                selected_titles.append(title)
+    status_options = ['Active', 'Left']
+    selected_status = []
+    cols = st.columns(2)  # Arrange checkboxes in 2 columns
 
-# Apply filters
-filtered_df = df[
-    (df["dept_name"].isin(selected_depts)) &
-    (df["title"].isin(selected_titles))
-]
+    for idx, status in enumerate(status_options):
+        with cols[idx % 2]:
+            selected = st.checkbox(status, value=all_status, key=f"status_{status}")
+            if selected:
+                selected_status.append(status)
+
+# **Apply Filters**
+status_conditions = []
+if 'Active' in selected_status:
+    status_conditions.append(df['last_date'].isna())  # Active employees (last_date is NaN)
+if 'Left' in selected_status:
+    status_conditions.append(df['last_date'].notna())  # Employees who left (last_date is NOT NaN)
+
+# Combine status conditions
+if status_conditions:
+    status_filter = np.logical_or.reduce(status_conditions)
+    filtered_df = df[(df["dept_name"].isin(selected_depts)) & status_filter]
+else:
+    filtered_df = df[df["dept_name"].isin(selected_depts)]  # If no status selected, use department filter only
 
 # Create filtered unique employees dataset for analysis where employee count should not be repeated
 unique_filtered_employees = filtered_df.drop_duplicates(subset=['emp_no']).copy()
