@@ -259,9 +259,3 @@ with tab4:
         use_container_width=True
     )
 
-# ======================
-# Raw Data Section (View Only, No Download)
-# ======================
-st.header("🔍 Data Explorer")
-with st.expander("View Filtered Data"):
-    st.dataframe(filtered_df, use_container_width=True)
