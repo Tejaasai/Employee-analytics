@@ -34,11 +34,11 @@ def logout():
 # ----------------- Resource Loading -----------------
 @st.cache_resource
 def load_resources():
-    model = joblib.load("Employee-analytics/logistic_regression_model.pkl")
-    scaler = joblib.load("Employee-analytics/scaler.pkl")
-    model_columns = joblib.load("Employee-analytics/model_columns.pkl")
+    model = joblib.load("logistic_regression_model.pkl")
+    scaler = joblib.load("scaler.pkl")
+    model_columns = joblib.load("model_columns.pkl")
     
-    with open("Employee-analytics\category_mapping.pkl", 'rb') as f:
+    with open("category_mapping.pkl", 'rb') as f:
         category_mapping = pickle.load(f)
     
     return model, scaler, model_columns, category_mapping
