@@ -28,7 +28,7 @@ def login_form():
             if authenticate_user(username, password):
                 st.session_state.authenticated = True
                 st.session_state.username = username
-                # st.rerun()
+                st.rerun()
             else:
                 st.error("Invalid credentials")
 
