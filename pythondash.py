@@ -149,14 +149,14 @@ with col2:
 
 # Third Row - Additional Metrics
 st.subheader("📌 Deep Dive Analytics")
-tab1, tab2, tab3, tab4 = st.tabs(["Gender Analysis", "Hiring Trends", "Rating Distribution", "Manager Overview"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Gender Analysis", "Hiring Trends","Rating Distribution","Employee Attrition Based on Tenure" , "Manager Overview"])
 
 with tab1:
     gender_col1, gender_col2 = st.columns(2)
     
     with gender_col1:
         st.markdown("**Gender Distribution**")
-        x = filtered_df[['emp_no', 'sex']].drop_duplicates()
+        x = filtered_df[['emp_no','sex']].drop_duplicates()
         gender_counts = x['sex'].value_counts()
         
         # Create pie chart with gender count
@@ -172,11 +172,12 @@ with tab1:
         ))
         st.plotly_chart(fig, use_container_width=True)
 
-    with gender_col2:
+    # title="Gender Distribution Across Departments"
+    with gender_col1:
         st.markdown("**Department-wise Gender Distribution**")
-        emp_df = (filtered_df.groupby(['dept_name', 'sex'])[['emp_no']]
-                 .agg(count_of_emp=('emp_no', np.count_nonzero))
-                 .reset_index())
+        emp_df = (filtered_df.groupby(['dept_name','sex'])[['emp_no']]
+                  .agg(count_of_emp=('emp_no', np.count_nonzero))
+                  .reset_index())
         
         # Create bar chart with matching color sequence
         fig = px.bar(emp_df, 
@@ -188,65 +189,454 @@ with tab1:
                      color_discrete_map={'M': '#1f77b4', 'F': '#ff7f0e'})
         
         fig.update_layout(
+            xaxis=dict(tickangle=90),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
                 y=-0.5
             ),
             xaxis_title="Department",
-            yaxis_title="Employee Count"
+            yaxis_title="Employee Count",
+            
         )
         st.plotly_chart(fig, use_container_width=True)
 
+
+
+    with gender_col2:
+        st.markdown("**Employees Left by Gender**")
+
+        # Filter only employees who left
+        left_employees = filtered_df[filtered_df['left'] == 1]  
+
+        # Get unique employee records based on emp_no and sex
+        x = left_employees[['emp_no', 'sex']].drop_duplicates()
+        
+        # Count employees who left by gender
+        gender_counts = x['sex'].value_counts()
+
+        # Create pie chart
+        fig = px.pie(
+            gender_counts, 
+            values=gender_counts.values, 
+            names=gender_counts.index,
+            category_orders={"sex": ["M", "F"]},
+            color_discrete_sequence=['#1f77b4', '#ff7f0e']  # Blue for M, Orange for F
+        )
+
+        fig.update_layout(
+            # title="Employees Left by Gender",
+            showlegend=True, 
+            legend=dict(orientation="h", yanchor="bottom", y=-0.4)
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+    with gender_col2:
+        st.markdown("**Employees Left by Department and Gender**")
+
+        # Filter only employees who left
+        left_emp_df = filtered_df[filtered_df['left'] == 1]
+
+        # Group by department and gender
+        emp_left_df = (left_emp_df.groupby(['dept_name', 'sex'])[['emp_no']]
+                    .agg(count_of_emp=('emp_no', np.count_nonzero))
+                    .reset_index())
+
+        # Create bar chart
+        fig = px.bar(
+            emp_left_df, 
+            x='dept_name', 
+            y='count_of_emp', 
+            color='sex',
+            barmode='group',  # Group bars by gender
+            category_orders={"sex": ["M", "F"]},
+            color_discrete_map={'M': '#1f77b4', 'F': '#ff7f0e'}  # Blue for M, Orange for F
+        )
+
+        fig.update_layout(
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.5
+            ),
+            xaxis_title="Department",
+            yaxis_title="Employees Left",
+            # title="Employees Left by Department and Gender"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+  
+
 with tab2:
-    hiring_trends = unique_filtered_employees.groupby(filtered_df['hire_date'].dt.year)['emp_no'].count()
-    fig = px.line(hiring_trends, x=hiring_trends.index, y=hiring_trends.values, markers=True,
-                 title="Year-wise Hiring Trends")
-    st.plotly_chart(fig, use_container_width=True)
+        hiring_trends = unique_filtered_employees.groupby(filtered_df['hire_date'].dt.year)['emp_no'].count()
+        fig = px.line(hiring_trends, x=hiring_trends.index, y=hiring_trends.values,markers=True,
+                    title="Year-wise Hiring Trends")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Filter only employees who left
+        left_emp_df = unique_filtered_employees[ unique_filtered_employees['left'] == 1]
+        hiring_trends = left_emp_df.groupby(filtered_df['hire_date'].dt.year)['emp_no'].count()
+        fig = px.line(hiring_trends, x=hiring_trends.index, y=hiring_trends.values,markers=True,
+                    title="Year-wise Employees Left in Hiring Years ")
+        st.plotly_chart(fig, use_container_width=True)
+    
 
 with tab3:
-    # Group by department and count performance ratings
-    performance_count = filtered_df.groupby('dept_name').agg(
-        A=('Last_performance_rating', lambda x: (x == 'A').sum()),
-        B=('Last_performance_rating', lambda x: (x == 'B').sum()),
-        C=('Last_performance_rating', lambda x: (x == 'C').sum()),
-        S=('Last_performance_rating', lambda x: (x == 'S').sum()),
-        PIP=('Last_performance_rating', lambda x: (x == 'PIP').sum())
-    ).reset_index()
+        # Group by department and count performance ratings
+        performance_count = filtered_df.groupby('dept_name').agg(
+            A=('Last_performance_rating', lambda x: (x == 'A').sum()),
+            B=('Last_performance_rating', lambda x: (x == 'B').sum()),
+            C=('Last_performance_rating', lambda x: (x == 'C').sum()),
+            S=('Last_performance_rating', lambda x: (x == 'S').sum()),
+            PIP=('Last_performance_rating', lambda x: (x == 'PIP').sum())
+        ).reset_index()
 
-    # Melt the data for Plotly
-    performance_count_melted = performance_count.melt(
-        id_vars=['dept_name'], 
-        var_name='Performance Rating', 
-        value_name='Count'
-    )
+        # Melt the data for Plotly
+        performance_count_melted = performance_count.melt(
+            id_vars=['dept_name'], 
+            var_name='Performance Rating', 
+            value_name='Count'
+        )
 
-    # Define custom color mapping (PIP in Red)
-    custom_colors = {
-        'A': '#2ca02c',   # Green
-        'B': '#1f77b4',   # Blue
-        'C': '#ffbb78',   # Light Orange
-        'S': '#9467bd',   # Purple
-        'PIP': '#d62728'  # Red (for least rating)
-    }
+        # Define custom color mapping (PIP in Red)
+        custom_colors = {
+            'A': '#2ca02c',   # Green
+            'B': '#1f77b4',   # Blue
+            'C': '#ffbb78',   # Light Orange
+            'S': '#9467bd',   # Purple
+            'PIP': '#d62728'  # Red (for least rating)
+        }
 
-    # Create stacked bar chart using Plotly
-    fig = px.bar(
-        performance_count_melted, 
-        x='dept_name', 
-        y='Count', 
-        color='Performance Rating',
-        barmode='stack', 
-        title="Performance Rating Distribution by Department",
-        labels={'dept_name': 'Department', 'Count': 'Number of Employees'},
-        color_discrete_map=custom_colors  # Change color theme
-    )
+        # Create stacked bar chart using Plotly
+        fig = px.bar(
+            performance_count_melted, 
+            x='dept_name', 
+            y='Count', 
+            color='Performance Rating',
+            barmode='stack', 
+            title="Performance Rating Distribution by Department",
+            labels={'dept_name': 'Department', 'Count': 'Number of Employees'},
+            color_discrete_map=custom_colors  # Change color theme
+        )
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
+
+                # Filter only employees who left
+        left_emp_df = filtered_df[filtered_df['left'] == 1]
+
+        # Group by department and count performance ratings for employees who left
+        performance_left_count = left_emp_df.groupby('dept_name').agg(
+            A=('Last_performance_rating', lambda x: (x == 'A').sum()),
+            B=('Last_performance_rating', lambda x: (x == 'B').sum()),
+            C=('Last_performance_rating', lambda x: (x == 'C').sum()),
+            S=('Last_performance_rating', lambda x: (x == 'S').sum()),
+            PIP=('Last_performance_rating', lambda x: (x == 'PIP').sum())
+        ).reset_index()
+
+        # Melt the data for Plotly
+        performance_left_melted = performance_left_count.melt(
+            id_vars=['dept_name'], 
+            var_name='Performance Rating', 
+            value_name='Count'
+        )
+
+        # Define custom color mapping (PIP in Red)
+        custom_colors = {
+            'A': '#2ca02c',   # Green
+            'B': '#1f77b4',   # Blue
+            'C': '#ffbb78',   # Light Orange
+            'S': '#9467bd',   # Purple
+            'PIP': '#d62728'  # Red (for least rating)
+        }
+
+        # Create stacked bar chart using Plotly
+        fig = px.bar(
+            performance_left_melted, 
+            x='dept_name', 
+            y='Count', 
+            color='Performance Rating',
+            barmode='stack', 
+            title="Performance Rating Distribution of Employees Who Left by Department",
+            labels={'dept_name': 'Department', 'Count': 'Number of Employees Left'},
+            color_discrete_map=custom_colors  # Change color theme
+        )
+
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+
+                # Create KDE (density) plot using Plotly
 with tab4:
+        fig = px.histogram(
+            unique_filtered_employees, 
+            x="tenure", 
+            color="left",  # Different colors for employees who left vs stayed
+            nbins=50,  # More bins for smoother density
+            histnorm='probability density',  # Ensures sum of densities = 1
+            barmode='overlay',  # Overlay both distributions
+            opacity=0.5,  # Similar to alpha in Seaborn
+            title="Employee Attrition Based on Tenure",
+            labels={"tenure": "Tenure (Years)", "left": "Attrition Status"},
+            color_discrete_map={1: '#ff7f0e', 0: '#1f77b4'}  # Orange for left, Blue for stayed
+        )
+
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+with tab5:
     st.markdown("**Manager Overview**")
-    managers_df = df.loc[df['title'] == 'Manager', ['title', 'emp_no', 'dept_no', 'dept_name', 'first_name', 'last_name', 'hire_date', 'salary']]
+    managers_df = df.loc[df['title']=='Manager',['title','emp_no','dept_no','dept_name','first_name','last_name','hire_date','salary']]
+    st.dataframe(
+        managers_df[['dept_name', 'first_name', 'last_name', 'hire_date', 'salary']],
+        column_config={
+            "dept_name": "Department",
+            "first_name": "First Name",
+            "last_name": "Last Name",
+            "hire_date": "Hire Date",
+            "salary": "Salary"
+        },
+        use_container_width=True
+with tab1:
+    gender_col1, gender_col2 = st.columns(2)
+    
+    with gender_col1:
+        st.markdown("**Gender Distribution**")
+        x = filtered_df[['emp_no','sex']].drop_duplicates()
+        gender_counts = x['sex'].value_counts()
+        
+        # Create pie chart with gender count
+        fig = px.pie(gender_counts, 
+                     values=gender_counts.values, 
+                     names=gender_counts.index,
+                     category_orders={"sex": ["M", "F"]},
+                     color_discrete_sequence=['#1f77b4', '#ff7f0e'])  # Blue for M, Orange for F
+        fig.update_layout(showlegend=True, legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.4
+        ))
+        st.plotly_chart(fig, use_container_width=True)
+
+    # title="Gender Distribution Across Departments"
+    with gender_col1:
+        st.markdown("**Department-wise Gender Distribution**")
+        emp_df = (filtered_df.groupby(['dept_name','sex'])[['emp_no']]
+                  .agg(count_of_emp=('emp_no', np.count_nonzero))
+                  .reset_index())
+        
+        # Create bar chart with matching color sequence
+        fig = px.bar(emp_df, 
+                     x='dept_name', 
+                     y='count_of_emp', 
+                     color='sex',
+                     barmode='group',
+                     category_orders={"sex": ["M", "F"]},
+                     color_discrete_map={'M': '#1f77b4', 'F': '#ff7f0e'})
+        
+        fig.update_layout(
+            xaxis=dict(tickangle=90),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.5
+            ),
+            xaxis_title="Department",
+            yaxis_title="Employee Count",
+            
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+    with gender_col2:
+        st.markdown("**Employees Left by Gender**")
+
+        # Filter only employees who left
+        left_employees = filtered_df[filtered_df['left'] == 1]  
+
+        # Get unique employee records based on emp_no and sex
+        x = left_employees[['emp_no', 'sex']].drop_duplicates()
+        
+        # Count employees who left by gender
+        gender_counts = x['sex'].value_counts()
+
+        # Create pie chart
+        fig = px.pie(
+            gender_counts, 
+            values=gender_counts.values, 
+            names=gender_counts.index,
+            category_orders={"sex": ["M", "F"]},
+            color_discrete_sequence=['#1f77b4', '#ff7f0e']  # Blue for M, Orange for F
+        )
+
+        fig.update_layout(
+            # title="Employees Left by Gender",
+            showlegend=True, 
+            legend=dict(orientation="h", yanchor="bottom", y=-0.4)
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+    with gender_col2:
+        st.markdown("**Employees Left by Department and Gender**")
+
+        # Filter only employees who left
+        left_emp_df = filtered_df[filtered_df['left'] == 1]
+
+        # Group by department and gender
+        emp_left_df = (left_emp_df.groupby(['dept_name', 'sex'])[['emp_no']]
+                    .agg(count_of_emp=('emp_no', np.count_nonzero))
+                    .reset_index())
+
+        # Create bar chart
+        fig = px.bar(
+            emp_left_df, 
+            x='dept_name', 
+            y='count_of_emp', 
+            color='sex',
+            barmode='group',  # Group bars by gender
+            category_orders={"sex": ["M", "F"]},
+            color_discrete_map={'M': '#1f77b4', 'F': '#ff7f0e'}  # Blue for M, Orange for F
+        )
+
+        fig.update_layout(
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.5
+            ),
+            xaxis_title="Department",
+            yaxis_title="Employees Left",
+            # title="Employees Left by Department and Gender"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+  
+
+with tab2:
+        hiring_trends = unique_filtered_employees.groupby(filtered_df['hire_date'].dt.year)['emp_no'].count()
+        fig = px.line(hiring_trends, x=hiring_trends.index, y=hiring_trends.values,markers=True,
+                    title="Year-wise Hiring Trends")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Filter only employees who left
+        left_emp_df = unique_filtered_employees[ unique_filtered_employees['left'] == 1]
+        hiring_trends = left_emp_df.groupby(filtered_df['hire_date'].dt.year)['emp_no'].count()
+        fig = px.line(hiring_trends, x=hiring_trends.index, y=hiring_trends.values,markers=True,
+                    title="Year-wise Employees Left in Hiring Years ")
+        st.plotly_chart(fig, use_container_width=True)
+    
+
+with tab3:
+        # Group by department and count performance ratings
+        performance_count = filtered_df.groupby('dept_name').agg(
+            A=('Last_performance_rating', lambda x: (x == 'A').sum()),
+            B=('Last_performance_rating', lambda x: (x == 'B').sum()),
+            C=('Last_performance_rating', lambda x: (x == 'C').sum()),
+            S=('Last_performance_rating', lambda x: (x == 'S').sum()),
+            PIP=('Last_performance_rating', lambda x: (x == 'PIP').sum())
+        ).reset_index()
+
+        # Melt the data for Plotly
+        performance_count_melted = performance_count.melt(
+            id_vars=['dept_name'], 
+            var_name='Performance Rating', 
+            value_name='Count'
+        )
+
+        # Define custom color mapping (PIP in Red)
+        custom_colors = {
+            'A': '#2ca02c',   # Green
+            'B': '#1f77b4',   # Blue
+            'C': '#ffbb78',   # Light Orange
+            'S': '#9467bd',   # Purple
+            'PIP': '#d62728'  # Red (for least rating)
+        }
+
+        # Create stacked bar chart using Plotly
+        fig = px.bar(
+            performance_count_melted, 
+            x='dept_name', 
+            y='Count', 
+            color='Performance Rating',
+            barmode='stack', 
+            title="Performance Rating Distribution by Department",
+            labels={'dept_name': 'Department', 'Count': 'Number of Employees'},
+            color_discrete_map=custom_colors  # Change color theme
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+
+                # Filter only employees who left
+        left_emp_df = filtered_df[filtered_df['left'] == 1]
+
+        # Group by department and count performance ratings for employees who left
+        performance_left_count = left_emp_df.groupby('dept_name').agg(
+            A=('Last_performance_rating', lambda x: (x == 'A').sum()),
+            B=('Last_performance_rating', lambda x: (x == 'B').sum()),
+            C=('Last_performance_rating', lambda x: (x == 'C').sum()),
+            S=('Last_performance_rating', lambda x: (x == 'S').sum()),
+            PIP=('Last_performance_rating', lambda x: (x == 'PIP').sum())
+        ).reset_index()
+
+        # Melt the data for Plotly
+        performance_left_melted = performance_left_count.melt(
+            id_vars=['dept_name'], 
+            var_name='Performance Rating', 
+            value_name='Count'
+        )
+
+        # Define custom color mapping (PIP in Red)
+        custom_colors = {
+            'A': '#2ca02c',   # Green
+            'B': '#1f77b4',   # Blue
+            'C': '#ffbb78',   # Light Orange
+            'S': '#9467bd',   # Purple
+            'PIP': '#d62728'  # Red (for least rating)
+        }
+
+        # Create stacked bar chart using Plotly
+        fig = px.bar(
+            performance_left_melted, 
+            x='dept_name', 
+            y='Count', 
+            color='Performance Rating',
+            barmode='stack', 
+            title="Performance Rating Distribution of Employees Who Left by Department",
+            labels={'dept_name': 'Department', 'Count': 'Number of Employees Left'},
+            color_discrete_map=custom_colors  # Change color theme
+        )
+
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+
+                # Create KDE (density) plot using Plotly
+with tab4:
+        fig = px.histogram(
+            unique_filtered_employees, 
+            x="tenure", 
+            color="left",  # Different colors for employees who left vs stayed
+            nbins=50,  # More bins for smoother density
+            histnorm='probability density',  # Ensures sum of densities = 1
+            barmode='overlay',  # Overlay both distributions
+            opacity=0.5,  # Similar to alpha in Seaborn
+            title="Employee Attrition Based on Tenure",
+            labels={"tenure": "Tenure (Years)", "left": "Attrition Status"},
+            color_discrete_map={1: '#ff7f0e', 0: '#1f77b4'}  # Orange for left, Blue for stayed
+        )
+
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+with tab5:
+    st.markdown("**Manager Overview**")
+    managers_df = df.loc[df['title']=='Manager',['title','emp_no','dept_no','dept_name','first_name','last_name','hire_date','salary']]
     st.dataframe(
         managers_df[['dept_name', 'first_name', 'last_name', 'hire_date', 'salary']],
         column_config={
@@ -258,4 +648,3 @@ with tab4:
         },
         use_container_width=True
     )
-
