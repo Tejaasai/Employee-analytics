@@ -4,7 +4,7 @@
 The client owns a leading company wants to enhance workforce management by analyzing employee performance and predicting which employees are likely to leave. High attrition rates impact productivity, increase hiring costs, and disrupt team efficiency. To address this, The analytics team is tasked with providing a detailed analysis to company.
 
 ## Business Objective:
-Analyze employee performance using factors like tenure, age, salary, satisfaction score
+Analyze employee performance using factors like tenure, age, salary, satisfaction score and
 Predict the employees who are going to leave based on the historic data.
 
 ## Tools Used:
